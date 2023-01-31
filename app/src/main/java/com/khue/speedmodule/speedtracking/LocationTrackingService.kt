@@ -26,10 +26,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import java.text.SimpleDateFormat
 import java.util.*
 
-class SpeedService: Service() {
+class LocationTrackingService: Service() {
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -50,7 +49,7 @@ class SpeedService: Service() {
         var NOTIFICATION_ICON = "@mipmap/ic_launcher"
 
         private const val PACKAGE_NAME = "com.khue.speedmodule"
-        private val TAG = SpeedService::class.java.simpleName
+        private val TAG = LocationTrackingService::class.java.simpleName
         private const val CHANNEL_ID = "channel_01"
         internal const val ACTION_BROADCAST = "$PACKAGE_NAME.broadcast"
         internal const val EXTRA_LOCATION = "$PACKAGE_NAME.location"
@@ -94,8 +93,8 @@ class SpeedService: Service() {
             return builder
         }
 
-    override fun onBind(intent: Intent?): IBinder? {
-       return null
+    override fun onBind(intent: Intent?): IBinder {
+       return mBinder
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -110,7 +109,7 @@ class SpeedService: Service() {
             createLocationRequest(0.0)
         }
 
-        startSpeedService()
+        startLocationTrackingService()
         requestLocationUpdates()
 
         return START_NOT_STICKY
@@ -131,7 +130,7 @@ class SpeedService: Service() {
             mFusedLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(local: LocationResult) {
                     super.onLocationResult(local)
-                    Log.e(TAG, "new location")
+                    Log.i(TAG, "new location")
                     onNewLocation(local.lastLocation!!)
                 }
             }
@@ -140,7 +139,7 @@ class SpeedService: Service() {
             mLocationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
 
             mLocationManagerCallback = LocationListener { location ->
-                Log.e(TAG, "new location 1")
+                Log.i(TAG, "new location 1")
                 onNewLocation(location)
             }
         }
@@ -178,7 +177,7 @@ class SpeedService: Service() {
         registerLocationReceiver()
     }
 
-    fun requestLocationUpdates() {
+    private fun requestLocationUpdates() {
         try {
             if (isGoogleApiAvailable && !this.forceLocationManager) {
                 mFusedLocationClient!!.requestLocationUpdates(
@@ -207,33 +206,6 @@ class SpeedService: Service() {
 
     private fun onNewLocation(location: Location) {
         val intent = Intent(ACTION_BROADCAST)
-        val simpleDate = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-        val formatted = simpleDate.format(Date())
-        var address: String? = null
-        try {
-            val geocoder = Geocoder(this, Locale.getDefault())
-            val list: List<Address> =
-                if(Build.VERSION.SDK_INT >= 33) {
-                    var locations = mutableListOf<Address>()
-                    geocoder.getFromLocation(location.latitude, location.longitude, 1, object: Geocoder.GeocodeListener {
-                        override fun onError(errorMessage: String?) {
-                            super.onError(errorMessage)
-                        }
-
-                        override fun onGeocode(list: MutableList<Address>) {
-                            locations = list
-                        }
-                    })
-                    locations
-                }
-                // this method is deprecated in android 13
-                else geocoder.getFromLocation(location.latitude, location.longitude, 1)?.toList() ?: emptyList()
-
-            address = list[0].getAddressLine(0)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
     }
@@ -248,11 +220,12 @@ class SpeedService: Service() {
         }
     }
 
-    fun startSpeedService() {
+    fun startLocationTrackingService() {
         startForeground(NOTIFICATION_ID, notification.build())
     }
 
-    fun stopSpeedService() {
+    private fun stopLocationTrackingService() {
+        Log.i(TAG, "stopLocationTrackingService")
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -276,7 +249,7 @@ class SpeedService: Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        stopSpeedService()
+        stopLocationTrackingService()
         Log.i(TAG, "onTaskRemoved")
     }
 
@@ -294,7 +267,7 @@ class SpeedService: Service() {
     }
 
     inner class LocalBinder : Binder() {
-        internal val service: SpeedService
-            get() = this@SpeedService
+        internal val service: LocationTrackingService
+            get() = this@LocationTrackingService
     }
 }
