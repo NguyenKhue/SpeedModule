@@ -28,7 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import java.util.*
 
-class LocationTrackingService: Service() {
+class LocationTrackingService : Service() {
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -54,31 +54,22 @@ class LocationTrackingService: Service() {
         internal const val EXTRA_LOCATION = "$PACKAGE_NAME.location"
         private const val EXTRA_STARTED_FROM_NOTIFICATION =
             "$PACKAGE_NAME.started_from_notification"
-        var UPDATE_INTERVAL_IN_MILLISECONDS: Long = 1000L
+        var UPDATE_INTERVAL_IN_MILLISECONDS: Long = 500L
         private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
         private const val NOTIFICATION_ID = 12345678
     }
 
     private val notification: NotificationCompat.Builder
-        @SuppressLint("UnspecifiedImmutableFlag")
-        get() {
-
+        @SuppressLint("UnspecifiedImmutableFlag") get() {
             val intent = Intent(this, getMainActivityClass(this))
             intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true)
             intent.action = "Localisation"
-            val pendingIntent =
-                PendingIntent.getActivity(
-                    this,
-                    1,
-                    intent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-
+            val pendingIntent = PendingIntent.getActivity(
+                this, 1, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
 
             val builder = NotificationCompat.Builder(this, "BackgroundLocation")
-                .setContentTitle(NOTIFICATION_TITLE)
-                .setOngoing(true)
-                .setSound(null)
+                .setContentTitle(NOTIFICATION_TITLE).setOngoing(true).setSound(null)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
                 .setWhen(System.currentTimeMillis())
@@ -93,7 +84,7 @@ class LocationTrackingService: Service() {
         }
 
     override fun onBind(intent: Intent?): IBinder? {
-       return null
+        return null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -117,8 +108,8 @@ class LocationTrackingService: Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate()")
-        val googleAPIAvailability = GoogleApiAvailability.getInstance()
-            .isGooglePlayServicesAvailable(applicationContext)
+        val googleAPIAvailability =
+            GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(applicationContext)
 
         isGoogleApiAvailable = googleAPIAvailability == ConnectionResult.SUCCESS
 
@@ -180,16 +171,11 @@ class LocationTrackingService: Service() {
         try {
             if (isGoogleApiAvailable && !this.forceLocationManager) {
                 mFusedLocationClient!!.requestLocationUpdates(
-                    mLocationRequest!!,
-                    mFusedLocationCallback!!,
-                    Looper.getMainLooper()
+                    mLocationRequest!!, mFusedLocationCallback!!, Looper.getMainLooper()
                 )
             } else {
                 mLocationManager?.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    0L,
-                    0f,
-                    mLocationManagerCallback!!
+                    LocationManager.GPS_PROVIDER, 0L, 0f, mLocationManagerCallback!!
                 )
             }
         } catch (e: SecurityException) {
@@ -210,13 +196,12 @@ class LocationTrackingService: Service() {
     }
 
     private fun createLocationRequest(distanceFilter: Double) {
-        mLocationRequest = LocationRequest.create()
-        mLocationRequest!!.apply {
-            interval = UPDATE_INTERVAL_IN_MILLISECONDS
-            fastestInterval = FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS
-            priority = Priority.PRIORITY_HIGH_ACCURACY
-            smallestDisplacement = distanceFilter.toFloat()
-        }
+        mLocationRequest = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY, UPDATE_INTERVAL_IN_MILLISECONDS
+        )
+            .setMinUpdateIntervalMillis(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS)
+            .setMinUpdateDistanceMeters(distanceFilter.toFloat())
+            .build()
     }
 
     fun startLocationTrackingService() {

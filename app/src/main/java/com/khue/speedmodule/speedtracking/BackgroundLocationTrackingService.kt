@@ -1,11 +1,8 @@
 package com.khue.speedmodule.speedtracking
 
 import android.content.*
-import android.location.Address
-import android.location.Geocoder
 import android.location.Location
 import android.os.Build
-import android.os.IBinder
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +23,7 @@ class BackgroundLocationTrackingService(private val context: Context) {
         }
     }
 
-    private var receiver: MyReceiver = MyReceiver()
+    private var receiver: LocationReceiver = LocationReceiver()
     private var service: LocationTrackingService? = null
 
     var location: MutableStateFlow<Location?> = MutableStateFlow(null)
@@ -63,32 +60,20 @@ class BackgroundLocationTrackingService(private val context: Context) {
         return 0
     }
 
-    fun setAndroidNotification(title: String?, message: String?, icon: String?): Int {
+    fun setAndroidNotification(title: String?, message: String?, icon: String?){
         if (title != null) LocationTrackingService.NOTIFICATION_TITLE = title
         if (message != null) LocationTrackingService.NOTIFICATION_MESSAGE = message
         if (icon != null) LocationTrackingService.NOTIFICATION_ICON = icon
 
         service?.startLocationTrackingService()
-
-        return 0
     }
 
-    fun setConfiguration(timeInterval: Long?): Int {
+    fun setConfiguration(timeInterval: Long?) {
         if (timeInterval != null) LocationTrackingService.UPDATE_INTERVAL_IN_MILLISECONDS =
             timeInterval
-
-        return 0
     }
 
-    /**
-     * Requests a location updated.
-     * If permission is denied, it requests the needed permission
-     */
-    private fun requestLocation() {
-        service?.startLocationTrackingService()
-    }
-
-    private inner class MyReceiver : BroadcastReceiver() {
+    private inner class LocationReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val location = when {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> intent.getParcelableExtra(LocationTrackingService.EXTRA_LOCATION, Location::class.java)
