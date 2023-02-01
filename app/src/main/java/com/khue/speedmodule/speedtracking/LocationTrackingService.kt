@@ -59,14 +59,17 @@ class LocationTrackingService : Service() {
         private const val NOTIFICATION_ID = 12345678
     }
 
+    private val notificationPendingIntent: PendingIntent by lazy {
+        val intent = Intent(this, getMainActivityClass(this))
+        intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true)
+        intent.action = "Localisation"
+        PendingIntent.getActivity(
+            this, 1, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
     private val notification: NotificationCompat.Builder
         @SuppressLint("UnspecifiedImmutableFlag") get() {
-            val intent = Intent(this, getMainActivityClass(this))
-            intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true)
-            intent.action = "Localisation"
-            val pendingIntent = PendingIntent.getActivity(
-                this, 1, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
 
             val builder = NotificationCompat.Builder(this, "BackgroundLocation")
                 .setContentTitle(NOTIFICATION_TITLE).setOngoing(true).setSound(null)
@@ -74,7 +77,7 @@ class LocationTrackingService : Service() {
                 .setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
                 .setWhen(System.currentTimeMillis())
                 .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
-                .setContentIntent(pendingIntent)
+                .setContentIntent(notificationPendingIntent)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID)
@@ -193,6 +196,7 @@ class LocationTrackingService : Service() {
         val intent = Intent(ACTION_BROADCAST)
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+        mNotificationManager?.notify(NOTIFICATION_ID, notification.build())
     }
 
     private fun createLocationRequest(distanceFilter: Double) {

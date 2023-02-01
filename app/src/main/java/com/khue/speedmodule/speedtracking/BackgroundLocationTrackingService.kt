@@ -31,7 +31,7 @@ class BackgroundLocationTrackingService(private val context: Context) {
     fun startLocationService(
         distanceFilter: Double = 0.0,
         forceLocationManager: Boolean = false
-    ): Int {
+    ) {
         LocalBroadcastManager.getInstance(context).registerReceiver(
             receiver,
             IntentFilter(LocationTrackingService.ACTION_BROADCAST)
@@ -46,8 +46,6 @@ class BackgroundLocationTrackingService(private val context: Context) {
             context.startService(intent)
             Log.i("BackgroundLocationService", "startService")
         }
-
-        return 0
     }
 
     fun stopLocationService(): Int {
@@ -64,8 +62,6 @@ class BackgroundLocationTrackingService(private val context: Context) {
         if (title != null) LocationTrackingService.NOTIFICATION_TITLE = title
         if (message != null) LocationTrackingService.NOTIFICATION_MESSAGE = message
         if (icon != null) LocationTrackingService.NOTIFICATION_ICON = icon
-
-        service?.startLocationTrackingService()
     }
 
     fun setConfiguration(timeInterval: Long?) {

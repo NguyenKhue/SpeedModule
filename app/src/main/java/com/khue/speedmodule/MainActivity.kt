@@ -41,7 +41,9 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launchWhenStarted {
             locationService.location.collect {
                 Log.i("MainActivity", "Location: $it")
-                binding.textView.text = "Latitude: ${it?.latitude}  \n Longitude: ${it?.longitude} \n speed: ${(it?.speed)?.let { speed -> speed * 3.6 }} km/h - ${(it?.speed)} m/s"
+                val message = "Latitude: ${it?.latitude}  \n Longitude: ${it?.longitude} \n speed: ${(it?.speed)?.let { speed -> speed * 3.6 }} km/h - ${(it?.speed)} m/s"
+                binding.textView.text = message
+                locationService.setAndroidNotification(message = message, title = null, icon = null)
             }
         }
     }
