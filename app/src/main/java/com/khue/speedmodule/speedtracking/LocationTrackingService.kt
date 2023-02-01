@@ -196,6 +196,9 @@ class LocationTrackingService : Service() {
         val intent = Intent(ACTION_BROADCAST)
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+
+        val message = "Latitude: ${location.latitude}  \n Longitude: ${location.longitude} \n speed: ${(location.speed) * 3.6} km/h - ${(location.speed)} m/s"
+        NOTIFICATION_MESSAGE = message
         mNotificationManager?.notify(NOTIFICATION_ID, notification.build())
     }
 

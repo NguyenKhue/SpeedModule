@@ -43,7 +43,6 @@ class MainActivity : AppCompatActivity() {
                 Log.i("MainActivity", "Location: $it")
                 val message = "Latitude: ${it?.latitude}  \n Longitude: ${it?.longitude} \n speed: ${(it?.speed)?.let { speed -> speed * 3.6 }} km/h - ${(it?.speed)} m/s"
                 binding.textView.text = message
-                locationService.setAndroidNotification(message = message, title = null, icon = null)
             }
         }
     }
