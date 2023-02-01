@@ -34,7 +34,6 @@ class LocationTrackingService: Service() {
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private var forceLocationManager: Boolean = false
     private lateinit var locationReceiver: BroadcastReceiver
-    private val mBinder = LocalBinder()
     private var mNotificationManager: NotificationManager? = null
     private var mLocationRequest: LocationRequest? = null
     private var mFusedLocationClient: FusedLocationProviderClient? = null
@@ -93,8 +92,8 @@ class LocationTrackingService: Service() {
             return builder
         }
 
-    override fun onBind(intent: Intent?): IBinder {
-       return mBinder
+    override fun onBind(intent: Intent?): IBinder? {
+       return null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -264,10 +263,5 @@ class LocationTrackingService: Service() {
             e.printStackTrace()
             null
         }
-    }
-
-    inner class LocalBinder : Binder() {
-        internal val service: LocationTrackingService
-            get() = this@LocationTrackingService
     }
 }

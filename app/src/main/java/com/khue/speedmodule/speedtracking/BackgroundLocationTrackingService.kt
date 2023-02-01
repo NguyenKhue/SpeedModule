@@ -90,8 +90,11 @@ class BackgroundLocationTrackingService(private val context: Context) {
 
     private inner class MyReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val location =
-                intent.getParcelableExtra<Location>(LocationTrackingService.EXTRA_LOCATION)
+            val location = when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> intent.getParcelableExtra(LocationTrackingService.EXTRA_LOCATION, Location::class.java)
+                else -> @Suppress("DEPRECATION") intent.getParcelableExtra(LocationTrackingService.EXTRA_LOCATION)
+            }
+
             if (location != null) {
                 val locationMap = mutableMapOf<String, Any>()
                 locationMap["latitude"] = location.latitude
@@ -101,36 +104,9 @@ class BackgroundLocationTrackingService(private val context: Context) {
                 locationMap["bearing"] = location.bearing.toDouble()
                 locationMap["speed"] = location.speed.toDouble()
                 locationMap["time"] = location.time.toDouble()
-                locationMap["is_mock"] =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) location.isMock else location.isFromMockProvider
-
-                try {
-                    val geocoder = Geocoder(context, Locale.getDefault())
-                    val list: List<Address> =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            var locations = mutableListOf<Address>()
-                            geocoder.getFromLocation(
-                                location.latitude,
-                                location.longitude,
-                                1,
-                                object : Geocoder.GeocodeListener {
-                                    override fun onError(errorMessage: String?) {
-                                        super.onError(errorMessage)
-                                    }
-
-                                    override fun onGeocode(list: MutableList<Address>) {
-                                        locations = list
-                                    }
-                                })
-                            locations
-                        }
-                        // this method is deprecated in android 13
-                        else geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                            ?.toList() ?: emptyList()
-
-                    val address = list[0].getAddressLine(0)
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                locationMap["is_mock"] = when {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> location.isMock
+                    else -> @Suppress("DEPRECATION") location.isFromMockProvider
                 }
                 this@BackgroundLocationTrackingService.location.value = location
             }
