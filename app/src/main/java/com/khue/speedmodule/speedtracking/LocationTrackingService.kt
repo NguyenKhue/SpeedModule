@@ -78,6 +78,7 @@ class LocationTrackingService : Service() {
                 .setWhen(System.currentTimeMillis())
                 .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
                 .setContentIntent(notificationPendingIntent)
+                .setOnlyAlertOnce(true)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID)
@@ -211,7 +212,7 @@ class LocationTrackingService : Service() {
             .build()
     }
 
-    fun startLocationTrackingService() {
+    private fun startLocationTrackingService() {
         startForeground(NOTIFICATION_ID, notification.build())
     }
 
