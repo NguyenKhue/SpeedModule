@@ -37,7 +37,7 @@ class LocationTrackingService : Service() {
     private var mNotificationManager: NotificationManager? = null
     private var mLocationRequest: LocationRequest? = null
     private var mFusedLocationClient: FusedLocationProviderClient? = null
-    private var mLocationManager: LocationManager? = null
+    private lateinit var mLocationManager: LocationManager
     private var mFusedLocationCallback: LocationCallback? = null
     private var mLocationManagerCallback: LocationListener? = null
     private var isGoogleApiAvailable: Boolean = false
@@ -70,7 +70,6 @@ class LocationTrackingService : Service() {
 
     private val notification: NotificationCompat.Builder
         @SuppressLint("UnspecifiedImmutableFlag") get() {
-
             val builder = NotificationCompat.Builder(this, "BackgroundLocation")
                 .setContentTitle(NOTIFICATION_TITLE).setOngoing(true).setSound(null)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -124,16 +123,16 @@ class LocationTrackingService : Service() {
             mFusedLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(local: LocationResult) {
                     super.onLocationResult(local)
-                    Log.i(TAG, "new location")
+                    Log.i(TAG, "new location by FusedLocationProviderClient")
                     onNewLocation(local.lastLocation!!)
                 }
             }
         } else {
             Log.d(TAG, "onCreate() - Google Play Services not available. Using LocationManager.")
-            mLocationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
+            mLocationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
             mLocationManagerCallback = LocationListener { location ->
-                Log.i(TAG, "new location 1")
+                Log.i(TAG, "new location by LocationManager")
                 onNewLocation(location)
             }
         }
@@ -150,12 +149,10 @@ class LocationTrackingService : Service() {
         locationReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (LocationManager.PROVIDERS_CHANGED_ACTION == intent!!.action) {
-                    val locationManager =
-                        context!!.getSystemService(Context.LOCATION_SERVICE) as LocationManager
                     val isGpsEnabled =
-                        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                        mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                     val isNetworkEnabled =
-                        locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                        mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
                     Log.d(
                         "LocationSwitchStateReceiver",
                         "isGpsEnabled: ${isGpsEnabled || isNetworkEnabled}"
@@ -178,9 +175,21 @@ class LocationTrackingService : Service() {
                     mLocationRequest!!, mFusedLocationCallback!!, Looper.getMainLooper()
                 )
             } else {
-                mLocationManager?.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 0L, 0f, mLocationManagerCallback!!
-                )
+                val isGpsEnabled =
+                    mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                val isNetworkEnabled =
+                    mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                when {
+                    isGpsEnabled -> mLocationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER, 0L, 0f, mLocationManagerCallback!!
+                    )
+                    isNetworkEnabled -> mLocationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER, 0L, 0f, mLocationManagerCallback!!
+                    )
+                    else -> {
+                        Log.d(TAG, "No location provider available")
+                    }
+                }
             }
         } catch (e: SecurityException) {
             e.printStackTrace()
@@ -231,7 +240,7 @@ class LocationTrackingService : Service() {
             if (isGoogleApiAvailable && !this.forceLocationManager) {
                 mFusedLocationClient!!.removeLocationUpdates(mFusedLocationCallback!!)
             } else {
-                mLocationManager!!.removeUpdates(mLocationManagerCallback!!)
+                mLocationManager.removeUpdates(mLocationManagerCallback!!)
             }
             mNotificationManager!!.cancel(NOTIFICATION_ID)
         } catch (e: SecurityException) {
