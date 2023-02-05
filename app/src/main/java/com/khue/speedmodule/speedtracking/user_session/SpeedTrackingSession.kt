@@ -13,7 +13,8 @@ object SpeedTrackingSession {
     private var tripDistanceF = 0.0f
     private var avgSpeedF = 0.0f
     private var timePassed: Long = 0
-    private var pauseTimePassed: Long = 0
+    private var currentPauseTimePassed: Long = 0
+    private var totalPauseTimePassed: Long = 0
     private var signalLevel: Int = 0
 
     private var currentDistance: Long = 0
@@ -28,8 +29,8 @@ object SpeedTrackingSession {
 
     private val sessionTimer = object : CountDownTimer(43200000, 1000) {
         override fun onTick(millisUntilFinished: Long) {
-            timePassed = (maxTime - millisUntilFinished) - pauseTimePassed
-            sessionDataListener?.invoke(getSessionData())
+            timePassed = (maxTime - millisUntilFinished) - totalPauseTimePassed
+            if(!isPaused) sessionDataListener?.invoke(getSessionData())
         }
 
         override fun onFinish() {}
@@ -37,10 +38,11 @@ object SpeedTrackingSession {
 
     private val pauseTimer = object : CountDownTimer(43200000, 1000) {
         override fun onTick(millisUntilFinished: Long) {
-            pauseTimePassed += (maxTime - millisUntilFinished)
+            currentPauseTimePassed = (maxTime - millisUntilFinished)
         }
 
-        override fun onFinish() {}
+        override fun onFinish() {
+        }
     }
 
 
@@ -63,6 +65,7 @@ object SpeedTrackingSession {
     fun resumeSession(onResumeSession: () -> Unit = {}) {
         isPaused = false
         shouldSkipAfterResume = true
+        totalPauseTimePassed += currentPauseTimePassed
         pauseTimer.cancel()
     }
 
@@ -73,7 +76,7 @@ object SpeedTrackingSession {
         tripDistanceF = 0.0f
         avgSpeedF = 0.0f
         timePassed = 0
-        pauseTimePassed = 0
+        currentPauseTimePassed = 0
         signalLevel = 0
         currentDistance = 0
         isStarted = false

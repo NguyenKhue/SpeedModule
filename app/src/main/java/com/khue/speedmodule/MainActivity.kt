@@ -33,6 +33,12 @@ class MainActivity : AppCompatActivity() {
         binding.button.setOnClickListener {
             locationService.stopLocationService()
         }
+        binding.button1.setOnClickListener {
+            locationService.pauseSession()
+        }
+        binding.button2.setOnClickListener {
+            locationService.resumeSession()
+        }
         startLocationTracking()
         observeLocation()
     }
