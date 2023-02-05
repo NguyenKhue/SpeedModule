@@ -1,11 +1,14 @@
-package com.khue.speedmodule.speedtracking
+package com.khue.speedmodule.speedtracking.services
 
 import android.content.*
 import android.location.Location
 import android.os.Build
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.khue.speedmodule.speedtracking.model.SessionData
+import com.khue.speedmodule.speedtracking.user_session.SpeedTrackingSession
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import java.util.*
 
 
@@ -24,9 +27,14 @@ class BackgroundLocationTrackingService(private val context: Context) {
     }
 
     private var receiver: LocationReceiver = LocationReceiver()
-    private var service: LocationTrackingService? = null
 
-    var location: MutableStateFlow<Location?> = MutableStateFlow(null)
+    var sessionData: MutableStateFlow<SessionData?> = MutableStateFlow(null)
+
+    init {
+        SpeedTrackingSession.sessionDataListener = { newSessionData ->
+            sessionData.update { newSessionData }
+        }
+    }
 
     fun startLocationService(
         distanceFilter: Double = 0.0,
@@ -36,9 +44,11 @@ class BackgroundLocationTrackingService(private val context: Context) {
             receiver,
             IntentFilter(LocationTrackingService.ACTION_BROADCAST)
         )
+
         val intent = Intent(context, LocationTrackingService::class.java)
         intent.putExtra("distance_filter", distanceFilter)
         intent.putExtra("force_location_manager", forceLocationManager)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
             Log.i("BackgroundLocationService", "startForegroundService")
@@ -46,16 +56,23 @@ class BackgroundLocationTrackingService(private val context: Context) {
             context.startService(intent)
             Log.i("BackgroundLocationService", "startService")
         }
+
+        SpeedTrackingSession.startSession()
     }
 
-    fun stopLocationService(): Int {
+    fun stopLocationService() {
         Log.i("BackgroundLocationTrackingService", "stopLocationService")
-
         LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
-
         context.stopService(Intent(context, LocationTrackingService::class.java))
+        SpeedTrackingSession.stopSession()
+    }
 
-        return 0
+    fun pauseSession() {
+        SpeedTrackingSession.pauseSession()
+    }
+
+    fun resumeSession() {
+        SpeedTrackingSession.resumeSession()
     }
 
     fun setAndroidNotification(title: String?, message: String?, icon: String?){
@@ -72,7 +89,8 @@ class BackgroundLocationTrackingService(private val context: Context) {
     private inner class LocationReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val location = when {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> intent.getParcelableExtra(LocationTrackingService.EXTRA_LOCATION, Location::class.java)
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> intent.getParcelableExtra(
+                    LocationTrackingService.EXTRA_LOCATION, Location::class.java)
                 else -> @Suppress("DEPRECATION") intent.getParcelableExtra(LocationTrackingService.EXTRA_LOCATION)
             }
 
@@ -89,7 +107,8 @@ class BackgroundLocationTrackingService(private val context: Context) {
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> location.isMock
                     else -> @Suppress("DEPRECATION") location.isFromMockProvider
                 }
-                this@BackgroundLocationTrackingService.location.value = location
+
+                SpeedTrackingSession.onNewLocation(location)
             }
         }
     }

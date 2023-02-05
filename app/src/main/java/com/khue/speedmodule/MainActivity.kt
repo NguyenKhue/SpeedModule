@@ -16,8 +16,8 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.khue.speedmodule.databinding.ActivityMainBinding
-import com.khue.speedmodule.speedtracking.BackgroundLocationTrackingService
-import com.khue.speedmodule.speedtracking.LocationTrackingService
+import com.khue.speedmodule.speedtracking.services.BackgroundLocationTrackingService
+import com.khue.speedmodule.speedtracking.services.LocationTrackingService
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,9 +39,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeLocation() {
         lifecycleScope.launchWhenStarted {
-            locationService.location.collect {
+            locationService.sessionData.collect {
                 Log.i("MainActivity", "Location: $it")
-                val message = "Latitude: ${it?.latitude}  \n Longitude: ${it?.longitude} \n speed: ${(it?.speed)?.let { speed -> speed * 3.6 }} km/h - ${(it?.speed)} m/s"
+                val message = it?.toString()
                 binding.textView.text = message
             }
         }

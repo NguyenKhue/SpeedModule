@@ -1,4 +1,4 @@
-package com.khue.speedmodule.speedtracking
+package com.khue.speedmodule.speedtracking.services
 
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
@@ -11,7 +11,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.location.*
 import android.location.LocationListener
-import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
