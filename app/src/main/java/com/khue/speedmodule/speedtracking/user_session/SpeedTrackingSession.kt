@@ -7,12 +7,12 @@ import kotlin.math.*
 
 object SpeedTrackingSession {
 
-    private var speed: Double = 0.0
-    private var maxSpeed: Double = 0.0
-    private var tripDistance: Long = 0
-    private var tripDistanceF = 0.0f
-    private var avgSpeedF = 0.0f
-    private var timePassed: Long = 0
+    private var speed: Double = 0.0     // m/s
+    private var maxSpeed: Double = 0.0  // m/s
+    private var tripDistance: Long = 0  // in centimeters
+    private var tripDistanceF = 0.0f // in km
+    private var avgSpeedF = 0.0f // km/h
+    private var timePassed: Long = 0 // in seconds
     private var currentPauseTimePassed: Long = 0
     private var totalPauseTimePassed: Long = 0
     private var signalLevel: Int = 0
@@ -29,7 +29,7 @@ object SpeedTrackingSession {
 
     private val sessionTimer = object : CountDownTimer(43200000, 1000) {
         override fun onTick(millisUntilFinished: Long) {
-            timePassed = (maxTime - millisUntilFinished) - totalPauseTimePassed
+            timePassed = ((maxTime - millisUntilFinished) - totalPauseTimePassed)/1000
             if(!isPaused) sessionDataListener?.invoke(getSessionData())
         }
 
@@ -98,7 +98,15 @@ object SpeedTrackingSession {
         )
     }
 
+    private fun initUserLocation(location: Location) {
+        if(oldLat == 0.0 && oldLong == 0.0) {
+            oldLat = location.latitude
+            oldLong = location.longitude
+        }
+    }
+
     fun onNewLocation(location: Location) {
+        initUserLocation(location)
         val latitude = location.latitude
         val longitude = location.longitude
         signalLevel = if (location.accuracy <= 4) {
@@ -130,8 +138,8 @@ object SpeedTrackingSession {
 
             currentDistance = calculateDistance(oldLat, oldLong, latitude, longitude)
             tripDistance += currentDistance
-            tripDistanceF = (tripDistance / 1000000).toFloat()
-            avgSpeedF = ((tripDistance / timePassed) * 36 / 10000).toFloat()
+            tripDistanceF = (tripDistance / 1000).toFloat()
+            avgSpeedF = ((tripDistance / timePassed) * 3.6).toFloat()
         }
 
         oldLat = latitude

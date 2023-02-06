@@ -10,6 +10,6 @@ data class SessionData(
     val signalLevel: Int,
 ) {
     override fun toString(): String {
-        return "Speed: $speed\nMax speed: $maxSpeed\nTrip distance: $tripDistance\nTrip distanceF: $tripDistanceF\nAvg speedF: $avgSpeedF\nTime passed: $timePassed\nSignal level: $signalLevel"
+        return "Speed: ${speed*3.6}\nMax speed: ${maxSpeed*3.6}\nTrip distance: $tripDistance\nTrip distanceF: $tripDistanceF\nAvg speedF: $avgSpeedF\nTime passed: $timePassed\nSignal level: $signalLevel"
     }
 }
