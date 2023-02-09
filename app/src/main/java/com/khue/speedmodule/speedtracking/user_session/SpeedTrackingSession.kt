@@ -7,9 +7,13 @@ import kotlin.math.*
 
 object SpeedTrackingSession {
 
+    private const val MAX_TIME_SESSION = 86400000L
+    private const val COUNT_DOWN_DURATION = 1000L
+    private const val EARTH_RADIUS = 6371000
+
     private var speed: Double = 0.0     // m/s
     private var maxSpeed: Double = 0.0  // m/s
-    private var tripDistance: Long = 0  // in centimeters
+    private var tripDistance: Long = 0  // in meters
     private var tripDistanceF = 0.0f // in km
     private var avgSpeedF = 0.0f // km/h
     private var timePassed: Long = 0 // in seconds
@@ -20,31 +24,29 @@ object SpeedTrackingSession {
     private var currentDistance: Long = 0
     private var isStarted = false
     private var isPaused = false
-    private const val maxTime: Long = 43200000
     private var curTime = 0.0
     private var oldLat = 0.0
     private var oldLong = 0.0
     private var shouldSkipAfterResume = false
     var sessionDataListener: ((SessionData)->Unit)? = null
 
-    private val sessionTimer = object : CountDownTimer(43200000, 1000) {
+    private val sessionTimer = object : CountDownTimer(MAX_TIME_SESSION, COUNT_DOWN_DURATION) {
         override fun onTick(millisUntilFinished: Long) {
-            timePassed = ((maxTime - millisUntilFinished) - totalPauseTimePassed)/1000
+            timePassed = ((MAX_TIME_SESSION - millisUntilFinished) - totalPauseTimePassed)/1000
             if(!isPaused) sessionDataListener?.invoke(getSessionData())
         }
 
         override fun onFinish() {}
     }
 
-    private val pauseTimer = object : CountDownTimer(43200000, 1000) {
+    private val pauseTimer = object : CountDownTimer(MAX_TIME_SESSION, COUNT_DOWN_DURATION) {
         override fun onTick(millisUntilFinished: Long) {
-            currentPauseTimePassed = (maxTime - millisUntilFinished)
+            currentPauseTimePassed = (MAX_TIME_SESSION - millisUntilFinished)
         }
 
         override fun onFinish() {
         }
     }
-
 
     fun startSession(onStartSession: () -> Unit = {}) {
         resetSession()
@@ -139,7 +141,7 @@ object SpeedTrackingSession {
             currentDistance = calculateDistance(oldLat, oldLong, latitude, longitude)
             tripDistance += currentDistance
             tripDistanceF = (tripDistance / 1000).toFloat()
-            avgSpeedF = ((tripDistance / timePassed) * 3.6).toFloat()
+            avgSpeedF = (((tripDistance * 1f) / timePassed.coerceAtLeast(1)) * 3.6).toFloat()
         }
 
         oldLat = latitude
@@ -165,6 +167,6 @@ object SpeedTrackingSession {
                 * cos(Math.toRadians(lat2)) * sin(dLon / 2)
                 * sin(dLon / 2)))
         val c = 2 * asin(sqrt(a))
-        return (6371000 * c).roundToLong()
+        return (EARTH_RADIUS * c).roundToLong() // in meters
     }
 }

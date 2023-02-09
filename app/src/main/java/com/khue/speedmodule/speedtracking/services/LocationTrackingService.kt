@@ -1,31 +1,25 @@
 package com.khue.speedmodule.speedtracking.services
 
-import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.location.*
+import android.location.Location
 import android.location.LocationListener
-import android.os.Build
+import android.location.LocationManager
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.*
-import com.google.android.gms.location.LocationRequest
+import com.khue.speedmodule.speedtracking.utils.notification.NotificationUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import java.util.*
 
 class LocationTrackingService : Service() {
 
@@ -33,57 +27,22 @@ class LocationTrackingService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private var forceLocationManager: Boolean = false
     private lateinit var locationReceiver: BroadcastReceiver
-    private var mNotificationManager: NotificationManager? = null
     private var mLocationRequest: LocationRequest? = null
     private var mFusedLocationClient: FusedLocationProviderClient? = null
     private lateinit var mLocationManager: LocationManager
     private var mFusedLocationCallback: LocationCallback? = null
     private var mLocationManagerCallback: LocationListener? = null
     private var isGoogleApiAvailable: Boolean = false
+    private val notificationUtil = NotificationUtil(this)
 
     companion object {
-        var NOTIFICATION_TITLE = "Location service"
-        var NOTIFICATION_MESSAGE = "Location service is running"
-        var NOTIFICATION_ICON = "@mipmap/ic_launcher"
-
-        private const val PACKAGE_NAME = "com.khue.speedmodule"
         private val TAG = LocationTrackingService::class.java.simpleName
-        private const val CHANNEL_ID = "channel_01"
-        internal const val ACTION_BROADCAST = "$PACKAGE_NAME.broadcast"
-        internal const val EXTRA_LOCATION = "$PACKAGE_NAME.location"
-        private const val EXTRA_STARTED_FROM_NOTIFICATION =
-            "$PACKAGE_NAME.started_from_notification"
+        internal const val ACTION_BROADCAST = "speed.tracking.broadcast"
+        internal const val EXTRA_LOCATION = "speed.tracking.location"
         var UPDATE_INTERVAL_IN_MILLISECONDS: Long = 500L
         private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
         private const val NOTIFICATION_ID = 12345678
     }
-
-    private val notificationPendingIntent: PendingIntent by lazy {
-        val intent = Intent(this, getMainActivityClass(this))
-        intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true)
-        intent.action = "Localisation"
-        PendingIntent.getActivity(
-            this, 1, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-    }
-
-    private val notification: NotificationCompat.Builder
-        @SuppressLint("UnspecifiedImmutableFlag") get() {
-            val builder = NotificationCompat.Builder(this, "BackgroundLocation")
-                .setContentTitle(NOTIFICATION_TITLE).setOngoing(true).setSound(null)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
-                .setWhen(System.currentTimeMillis())
-                .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
-                .setContentIntent(notificationPendingIntent)
-                .setOnlyAlertOnce(true)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder.setChannelId(CHANNEL_ID)
-            }
-
-            return builder
-        }
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -103,7 +62,13 @@ class LocationTrackingService : Service() {
 
         startLocationTrackingService()
         requestLocationUpdates()
-
+        notificationUtil.configure(
+            "Speed Tracking",
+            "Tracking your speed",
+            "@mipmap/ic_launcher",
+            packageName,
+            NOTIFICATION_ID,
+        )
         return START_NOT_STICKY
     }
 
@@ -134,15 +99,6 @@ class LocationTrackingService : Service() {
                 Log.i(TAG, "new location by LocationManager")
                 onNewLocation(location)
             }
-        }
-
-        mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Application Name"
-            val mChannel =
-                NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_HIGH)
-            mChannel.setSound(null, null)
-            mNotificationManager!!.createNotificationChannel(mChannel)
         }
 
         locationReceiver = object : BroadcastReceiver() {
@@ -207,8 +163,7 @@ class LocationTrackingService : Service() {
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
 
         val message = "Latitude: ${location.latitude}  \nLongitude: ${location.longitude} \nSpeed: ${(location.speed) * 3.6} km/h - ${(location.speed)} m/s"
-        NOTIFICATION_MESSAGE = message
-        mNotificationManager?.notify(NOTIFICATION_ID, notification.build())
+        notificationUtil.updateNotification(message)
     }
 
     private fun createLocationRequest(distanceFilter: Double) {
@@ -221,7 +176,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun startLocationTrackingService() {
-        startForeground(NOTIFICATION_ID, notification.build())
+        startForeground(NOTIFICATION_ID, notificationUtil.getNotificationBuilder().build())
     }
 
     private fun stopLocationTrackingService() {
@@ -241,7 +196,7 @@ class LocationTrackingService : Service() {
             } else {
                 mLocationManager.removeUpdates(mLocationManagerCallback!!)
             }
-            mNotificationManager!!.cancel(NOTIFICATION_ID)
+            notificationUtil.cancelNotification()
         } catch (e: SecurityException) {
             e.printStackTrace()
         }
@@ -250,18 +205,5 @@ class LocationTrackingService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         Log.i(TAG, "onTaskRemoved")
-    }
-
-    private fun getMainActivityClass(context: Context): Class<*>? {
-        val packageName = context.packageName
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
-        val className = launchIntent?.component?.className ?: return null
-
-        return try {
-            Class.forName(className)
-        } catch (e: ClassNotFoundException) {
-            e.printStackTrace()
-            null
-        }
     }
 }

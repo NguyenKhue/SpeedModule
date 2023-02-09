@@ -75,12 +75,6 @@ class BackgroundLocationTrackingService(private val context: Context) {
         SpeedTrackingSession.resumeSession()
     }
 
-    fun setAndroidNotification(title: String?, message: String?, icon: String?){
-        if (title != null) LocationTrackingService.NOTIFICATION_TITLE = title
-        if (message != null) LocationTrackingService.NOTIFICATION_MESSAGE = message
-        if (icon != null) LocationTrackingService.NOTIFICATION_ICON = icon
-    }
-
     fun setConfiguration(timeInterval: Long?) {
         if (timeInterval != null) LocationTrackingService.UPDATE_INTERVAL_IN_MILLISECONDS =
             timeInterval
