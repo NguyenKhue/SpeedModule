@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.khue.speedmodule.speedtracking.model.SessionData
 import com.khue.speedmodule.speedtracking.user_session.SpeedTrackingSession
+import com.khue.speedmodule.speedtracking.utils.notification.NotificationUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.*
@@ -40,6 +41,15 @@ class BackgroundLocationTrackingService(private val context: Context) {
         distanceFilter: Double = 0.0,
         forceLocationManager: Boolean = false
     ) {
+
+        NotificationUtil.configureNormalNotification(
+            "Speed Tracking",
+            "Tracking your speed",
+            "@mipmap/ic_launcher",
+            context.packageName,
+            context
+        )
+
         LocalBroadcastManager.getInstance(context).registerReceiver(
             receiver,
             IntentFilter(LocationTrackingService.ACTION_BROADCAST)
@@ -103,6 +113,8 @@ class BackgroundLocationTrackingService(private val context: Context) {
                 }
 
                 SpeedTrackingSession.onNewLocation(location)
+                val message = "Latitude: ${location.latitude}  \nLongitude: ${location.longitude} \nSpeed: ${(location.speed) * 3.6} km/h - ${(location.speed)} m/s"
+                NotificationUtil.updateNotification(message, context)
             }
         }
     }

@@ -33,7 +33,6 @@ class LocationTrackingService : Service() {
     private var mFusedLocationCallback: LocationCallback? = null
     private var mLocationManagerCallback: LocationListener? = null
     private var isGoogleApiAvailable: Boolean = false
-    private val notificationUtil = NotificationUtil(this)
 
     companion object {
         private val TAG = LocationTrackingService::class.java.simpleName
@@ -41,7 +40,6 @@ class LocationTrackingService : Service() {
         internal const val EXTRA_LOCATION = "speed.tracking.location"
         var UPDATE_INTERVAL_IN_MILLISECONDS: Long = 500L
         private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
-        private const val NOTIFICATION_ID = 12345678
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -62,13 +60,6 @@ class LocationTrackingService : Service() {
 
         startLocationTrackingService()
         requestLocationUpdates()
-        notificationUtil.configure(
-            "Speed Tracking",
-            "Tracking your speed",
-            "@mipmap/ic_launcher",
-            packageName,
-            NOTIFICATION_ID,
-        )
         return START_NOT_STICKY
     }
 
@@ -161,9 +152,6 @@ class LocationTrackingService : Service() {
         val intent = Intent(ACTION_BROADCAST)
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
-
-        val message = "Latitude: ${location.latitude}  \nLongitude: ${location.longitude} \nSpeed: ${(location.speed) * 3.6} km/h - ${(location.speed)} m/s"
-        notificationUtil.updateNotification(message)
     }
 
     private fun createLocationRequest(distanceFilter: Double) {
@@ -176,7 +164,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun startLocationTrackingService() {
-        startForeground(NOTIFICATION_ID, notificationUtil.getNotificationBuilder().build())
+        startForeground(NotificationUtil.notificationId, NotificationUtil.getNotificationBuilder(this).build())
     }
 
     private fun stopLocationTrackingService() {
@@ -196,7 +184,7 @@ class LocationTrackingService : Service() {
             } else {
                 mLocationManager.removeUpdates(mLocationManagerCallback!!)
             }
-            notificationUtil.cancelNotification()
+            NotificationUtil.cancelNotification()
         } catch (e: SecurityException) {
             e.printStackTrace()
         }
