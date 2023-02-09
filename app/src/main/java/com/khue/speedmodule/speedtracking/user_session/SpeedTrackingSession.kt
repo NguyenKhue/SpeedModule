@@ -28,12 +28,17 @@ object SpeedTrackingSession {
     private var oldLat = 0.0
     private var oldLong = 0.0
     private var shouldSkipAfterResume = false
-    var sessionDataListener: ((SessionData)->Unit)? = null
+
+    var sessionDataListener: ((SessionData, Boolean)->Unit)? = null
+    var onStartSessionListener: (()->Unit)? = null
+    var onStopSessionListener: (()->Unit)? = null
+    var onPauseSessionListener: (()->Unit)? = null
+    var onResumeSessionListener: (()->Unit)? = null
 
     private val sessionTimer = object : CountDownTimer(MAX_TIME_SESSION, COUNT_DOWN_DURATION) {
         override fun onTick(millisUntilFinished: Long) {
             timePassed = ((MAX_TIME_SESSION - millisUntilFinished) - totalPauseTimePassed)/1000
-            if(!isPaused) sessionDataListener?.invoke(getSessionData())
+            if(!isPaused) sessionDataListener?.invoke(getSessionData(), isPaused)
         }
 
         override fun onFinish() {}
@@ -48,27 +53,31 @@ object SpeedTrackingSession {
         }
     }
 
-    fun startSession(onStartSession: () -> Unit = {}) {
+    fun startSession() {
         resetSession()
         isStarted = true
         sessionTimer.start()
+        onStartSessionListener?.invoke()
     }
 
-    fun stopSession(onStopSession: () -> Unit = {}) {
+    fun stopSession() {
         isStarted = false
         sessionTimer.cancel()
+        onStopSessionListener?.invoke()
     }
 
-    fun pauseSession(onPauseSession: () -> Unit = {}) {
+    fun pauseSession() {
         isPaused = true
         pauseTimer.start()
+        onPauseSessionListener?.invoke()
     }
 
-    fun resumeSession(onResumeSession: () -> Unit = {}) {
+    fun resumeSession() {
         isPaused = false
         shouldSkipAfterResume = true
         totalPauseTimePassed += currentPauseTimePassed
         pauseTimer.cancel()
+        onResumeSessionListener?.invoke()
     }
 
     private fun resetSession() {

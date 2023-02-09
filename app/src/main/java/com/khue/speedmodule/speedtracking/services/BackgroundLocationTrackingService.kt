@@ -32,7 +32,7 @@ class BackgroundLocationTrackingService(private val context: Context) {
     var sessionData: MutableStateFlow<SessionData?> = MutableStateFlow(null)
 
     init {
-        SpeedTrackingSession.sessionDataListener = { newSessionData ->
+        SpeedTrackingSession.sessionDataListener = { newSessionData, _ ->
             sessionData.update { newSessionData }
         }
     }
