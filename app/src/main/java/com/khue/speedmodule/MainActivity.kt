@@ -18,38 +18,44 @@ import androidx.lifecycle.lifecycleScope
 import com.khue.speedmodule.databinding.ActivityMainBinding
 import com.khue.speedmodule.speedtracking.services.BackgroundLocationTrackingService
 import com.khue.speedmodule.speedtracking.services.LocationTrackingService
+import com.khue.speedmodule.speedtracking.user_session.SpeedTrackingSession
+import com.khue.speedmodule.speedtracking.utils.notification.NotificationUtil
+import kotlinx.coroutines.flow.update
 
 class MainActivity : AppCompatActivity() {
 
     private val permissionId = 3
-    private lateinit var locationService: BackgroundLocationTrackingService
     private var _binding: ActivityMainBinding? = null
     private val binding get() = _binding!!
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        locationService = BackgroundLocationTrackingService.getInstance(this.applicationContext)
         binding.button.setOnClickListener {
-            locationService.stopLocationService()
+            SpeedTrackingSession.stopSession(this)
         }
         binding.button1.setOnClickListener {
-            locationService.pauseSession()
+            SpeedTrackingSession.pauseSession()
         }
         binding.button2.setOnClickListener {
-            locationService.resumeSession()
+            SpeedTrackingSession.resumeSession()
         }
         startLocationTracking()
         observeLocation()
     }
 
     private fun observeLocation() {
-        lifecycleScope.launchWhenStarted {
-            locationService.sessionData.collect {
-                Log.i("MainActivity", "Location: $it")
-                val message = it?.toString()
-                binding.textView.text = message
-            }
+        SpeedTrackingSession.sessionDataListener = { newSessionData, _ ->
+            val message = "Speed: ${newSessionData.speed}" +
+                    "\nMax speed: ${newSessionData.maxSpeed} " +
+                    "\nAVG speed: ${newSessionData.avgSpeedF}" +
+                    "\nTime passed: ${newSessionData.timePassed}" +
+                    "\nTrip distance: ${newSessionData.tripDistance}" +
+                    "\nTrip distanceF: ${newSessionData.tripDistanceF}" +
+                    "\nSignal level: ${newSessionData.signalLevel}"
+            NotificationUtil.updateNotification(message, this)
+            Log.i("MainActivity", "Location: $newSessionData")
+            binding.textView.text = message
         }
     }
 
@@ -84,7 +90,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startLocationService() {
         if (!application.isServiceRunning(LocationTrackingService::class.java)) {
-            locationService.startLocationService()
+            SpeedTrackingSession.startSession(context = this)
         }
     }
 

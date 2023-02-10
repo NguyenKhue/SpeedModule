@@ -1,8 +1,10 @@
 package com.khue.speedmodule.speedtracking.user_session
 
+import android.content.Context
 import android.location.Location
 import android.os.CountDownTimer
 import com.khue.speedmodule.speedtracking.model.SessionData
+import com.khue.speedmodule.speedtracking.services.BackgroundLocationTrackingService
 import kotlin.math.*
 
 object SpeedTrackingSession {
@@ -53,17 +55,19 @@ object SpeedTrackingSession {
         }
     }
 
-    fun startSession() {
+    fun startSession(context: Context) {
         resetSession()
         isStarted = true
         sessionTimer.start()
         onStartSessionListener?.invoke()
+        BackgroundLocationTrackingService.getInstance(context).startLocationService()
     }
 
-    fun stopSession() {
+    fun stopSession(context: Context) {
         isStarted = false
         sessionTimer.cancel()
         onStopSessionListener?.invoke()
+        BackgroundLocationTrackingService.getInstance(context).stopLocationService()
     }
 
     fun pauseSession() {

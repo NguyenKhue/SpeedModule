@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.update
 import java.util.*
 
 
-class BackgroundLocationTrackingService(private val context: Context) {
+internal class BackgroundLocationTrackingService(private val context: Context) {
 
     companion object {
         private lateinit var instance: BackgroundLocationTrackingService
@@ -28,22 +28,6 @@ class BackgroundLocationTrackingService(private val context: Context) {
     }
 
     private var receiver: LocationReceiver = LocationReceiver()
-
-    var sessionData: MutableStateFlow<SessionData?> = MutableStateFlow(null)
-
-    init {
-        SpeedTrackingSession.sessionDataListener = { newSessionData, _ ->
-            sessionData.update { newSessionData }
-            val message = "Speed: ${newSessionData.speed}" +
-                    "\nMax speed: ${newSessionData.maxSpeed} " +
-                    "\nAVG speed: ${newSessionData.avgSpeedF}" +
-                    "\nTime passed: ${newSessionData.timePassed}" +
-                    "\nTrip distance: ${newSessionData.tripDistance}" +
-                    "\nTrip distanceF: ${newSessionData.tripDistanceF}" +
-                    "\nSignal level: ${newSessionData.signalLevel}"
-            NotificationUtil.updateNotification(message, context)
-        }
-    }
 
     fun startLocationService(
         distanceFilter: Double = 0.0,
@@ -74,23 +58,12 @@ class BackgroundLocationTrackingService(private val context: Context) {
             context.startService(intent)
             Log.i("BackgroundLocationService", "startService")
         }
-
-        SpeedTrackingSession.startSession()
     }
 
     fun stopLocationService() {
         Log.i("BackgroundLocationTrackingService", "stopLocationService")
         LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
         context.stopService(Intent(context, LocationTrackingService::class.java))
-        SpeedTrackingSession.stopSession()
-    }
-
-    fun pauseSession() {
-        SpeedTrackingSession.pauseSession()
-    }
-
-    fun resumeSession() {
-        SpeedTrackingSession.resumeSession()
     }
 
     fun setConfiguration(timeInterval: Long?) {
