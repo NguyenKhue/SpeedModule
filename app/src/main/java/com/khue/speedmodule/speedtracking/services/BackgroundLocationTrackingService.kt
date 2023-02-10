@@ -34,6 +34,14 @@ class BackgroundLocationTrackingService(private val context: Context) {
     init {
         SpeedTrackingSession.sessionDataListener = { newSessionData, _ ->
             sessionData.update { newSessionData }
+            val message = "Speed: ${newSessionData.speed}" +
+                    "\nMax speed: ${newSessionData.maxSpeed} " +
+                    "\nAVG speed: ${newSessionData.avgSpeedF}" +
+                    "\nTime passed: ${newSessionData.timePassed}" +
+                    "\nTrip distance: ${newSessionData.tripDistance}" +
+                    "\nTrip distanceF: ${newSessionData.tripDistanceF}" +
+                    "\nSignal level: ${newSessionData.signalLevel}"
+            NotificationUtil.updateNotification(message, context)
         }
     }
 
@@ -113,8 +121,6 @@ class BackgroundLocationTrackingService(private val context: Context) {
                 }
 
                 SpeedTrackingSession.onNewLocation(location)
-                val message = "Latitude: ${location.latitude}  \nLongitude: ${location.longitude} \nSpeed: ${(location.speed) * 3.6} km/h - ${(location.speed)} m/s"
-                NotificationUtil.updateNotification(message, context)
             }
         }
     }

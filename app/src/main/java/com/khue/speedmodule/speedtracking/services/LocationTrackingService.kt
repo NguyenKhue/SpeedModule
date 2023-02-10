@@ -188,6 +188,8 @@ class LocationTrackingService : Service() {
         } catch (e: SecurityException) {
             e.printStackTrace()
         }
+
+        // todo: call end session here
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
