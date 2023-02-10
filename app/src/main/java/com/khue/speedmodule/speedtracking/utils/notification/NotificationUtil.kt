@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
 import com.khue.speedmodule.R
 import kotlin.random.Random
 
@@ -56,6 +57,7 @@ object NotificationUtil {
             .setStyle(NotificationCompat.BigTextStyle().bigText(notificationMessage))
             .setContentIntent(notificationPendingIntent)
             .setOnlyAlertOnce(true)
+            .setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder.setChannelId(channelId)
