@@ -7,7 +7,9 @@ import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.khue.speedmodule.speedtracking.model.SessionData
 import com.khue.speedmodule.speedtracking.user_session.SpeedTrackingSession
+import com.khue.speedmodule.speedtracking.utils.isServiceRunning
 import com.khue.speedmodule.speedtracking.utils.notification.NotificationUtil
+import com.khue.speedmodule.speedtracking.utils.runOnApiAboveAndElse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.*
@@ -51,13 +53,22 @@ internal class BackgroundLocationTrackingService(private val context: Context) {
         intent.putExtra("distance_filter", distanceFilter)
         intent.putExtra("force_location_manager", forceLocationManager)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-            Log.i("BackgroundLocationService", "startForegroundService")
-        } else {
-            context.startService(intent)
-            Log.i("BackgroundLocationService", "startService")
-        }
+        if(isServiceRunning().not())
+            runOnApiAboveAndElse(
+                api = Build.VERSION_CODES.O,
+                runOnApiHigher = {
+                    context.startForegroundService(intent)
+                    Log.i("BackgroundLocationService", "startForegroundService")
+                },
+                runOnApiLower = {
+                    context.startService(intent)
+                    Log.i("BackgroundLocationService", "startService")
+                }
+            )
+    }
+
+    private fun isServiceRunning(): Boolean {
+        return context.isServiceRunning(LocationTrackingService::class.java)
     }
 
     fun stopLocationService() {

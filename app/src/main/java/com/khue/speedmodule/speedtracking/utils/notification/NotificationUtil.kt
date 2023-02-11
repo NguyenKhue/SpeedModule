@@ -83,7 +83,7 @@ object NotificationUtil {
 
     fun updateNotification(message: String, context: Context) {
         notificationMessage = message
-        mNotificationManager?.notify(notificationId!!, getNotificationBuilder(context).build())
+        mNotificationManager?.notify(notificationId, getNotificationBuilder(context).build())
     }
 
     private fun getMainActivityClass(context: Context): Class<*>? {

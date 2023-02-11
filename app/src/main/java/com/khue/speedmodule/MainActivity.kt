@@ -1,26 +1,20 @@
 package com.khue.speedmodule
 
-import android.Manifest
-import android.app.ActivityManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.lifecycleScope
 import com.khue.speedmodule.databinding.ActivityMainBinding
-import com.khue.speedmodule.speedtracking.services.BackgroundLocationTrackingService
-import com.khue.speedmodule.speedtracking.services.LocationTrackingService
 import com.khue.speedmodule.speedtracking.user_session.SpeedTrackingSession
 import com.khue.speedmodule.speedtracking.utils.notification.NotificationUtil
-import kotlinx.coroutines.flow.update
+import com.khue.speedmodule.speedtracking.utils.runOnApiAbove
+import com.khue.speedmodule.speedtracking.utils.speed.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,13 +49,13 @@ class MainActivity : AppCompatActivity() {
                     "\nSignal level: ${newSessionData.signalLevel}"
             NotificationUtil.updateNotification(message, this)
             Log.i("MainActivity", "Location: $newSessionData")
-            if(_binding != null) binding.textView.text = message
+            if (_binding != null) binding.textView.text = message
         }
     }
 
     private fun requestAccessBGLocationForAndroidQorHigher() {
         runOnApiAbove(Build.VERSION_CODES.Q) {
-            if (!checkLocationAccessBG() && checkPermissions()) {
+            if (!checkLocationAccessInBackground() && checkPermissions()) {
                 requestAccessBGLocation()
             }
         }
@@ -80,51 +74,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isLocationEnabled(): Boolean {
-        val locationManager: LocationManager =
-            getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
-            LocationManager.NETWORK_PROVIDER
-        )
-    }
-
     private fun startLocationService() {
-        if (!application.isServiceRunning(LocationTrackingService::class.java)) {
-            SpeedTrackingSession.startSession(context = this)
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun checkLocationAccessBG(): Boolean {
-        val isGranted =
-            ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        Toast.makeText(this, "access bg $isGranted", Toast.LENGTH_LONG).show()
-        return isGranted
-    }
-
-    private fun checkPermissions(): Boolean {
-
-        return ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+        SpeedTrackingSession.startSession(context = this)
     }
 
     private fun requestPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
         ActivityCompat.requestPermissions(
             this,
-            permissions.toTypedArray(),
+            speedPermissions.toTypedArray(),
             permissionId
         )
     }
@@ -132,12 +89,9 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun requestAccessBGLocation() {
         Log.i("requestAccessBGLocation", "requestAccessBGLocation")
-        val permissions = mutableListOf(
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION
-        )
         ActivityCompat.requestPermissions(
             this,
-            permissions.toTypedArray(),
+            optionalPermissionForAndroidQOrHigher.toTypedArray(),
             permissionId
         )
     }
@@ -152,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 startLocationService()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    if (!checkLocationAccessBG()) {
+                    if (!checkLocationAccessInBackground()) {
                         requestAccessBGLocation()
                     }
                 }
@@ -164,17 +118,4 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         _binding = null
     }
-}
-
-inline fun runOnApiAbove(api: Int, f: () -> Unit) {
-    if (Build.VERSION.SDK_INT > api) {
-        f()
-    }
-}
-
-@Suppress("DEPRECATION")
-fun <T> Context.isServiceRunning(service: Class<T>): Boolean {
-    return (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager)
-        .getRunningServices(Integer.MAX_VALUE)
-        .any { it.service.className == service.name }
 }
