@@ -5,6 +5,10 @@ import android.location.Location
 import android.os.CountDownTimer
 import com.khue.speedmodule.speedtracking.model.SessionData
 import com.khue.speedmodule.speedtracking.services.BackgroundLocationTrackingService
+import com.khue.speedmodule.speedtracking.services.LocationTrackingService
+import com.khue.speedmodule.speedtracking.utils.isServiceRunning
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.math.*
 
 object SpeedTrackingSession {
@@ -31,16 +35,12 @@ object SpeedTrackingSession {
     private var oldLong = 0.0
     private var shouldSkipAfterResume = false
 
-    var sessionDataListener: ((SessionData, Boolean)->Unit)? = null
-    var onStartSessionListener: (()->Unit)? = null
-    var onStopSessionListener: (()->Unit)? = null
-    var onPauseSessionListener: (()->Unit)? = null
-    var onResumeSessionListener: (()->Unit)? = null
+    val sessionData = MutableStateFlow(SessionData())
 
     private val sessionTimer = object : CountDownTimer(MAX_TIME_SESSION, COUNT_DOWN_DURATION) {
         override fun onTick(millisUntilFinished: Long) {
-            timePassed = ((MAX_TIME_SESSION - millisUntilFinished) - totalPauseTimePassed)/1000
-            if(!isPaused) sessionDataListener?.invoke(getSessionData(), isPaused)
+            timePassed = ((MAX_TIME_SESSION - millisUntilFinished) - totalPauseTimePassed) / 1000
+            if (!isPaused) sessionData.update { getSessionData() }
         }
 
         override fun onFinish() {}
@@ -55,33 +55,35 @@ object SpeedTrackingSession {
         }
     }
 
-    fun startSession(context: Context) {
-        resetSession()
-        isStarted = true
-        sessionTimer.start()
-        onStartSessionListener?.invoke()
-        BackgroundLocationTrackingService.getInstance(context).startLocationService()
+    fun startSession(context: Context, onStartSessionListener: (() -> Unit) = {}) {
+        if (!context.isServiceRunning(LocationTrackingService::class.java)) {
+            resetSession()
+            isStarted = true
+            sessionTimer.start()
+            onStartSessionListener.invoke()
+            BackgroundLocationTrackingService.getInstance(context).startLocationService()
+        }
     }
 
-    fun stopSession(context: Context) {
+    fun stopSession(context: Context, onStopSessionListener: (() -> Unit) = {}) {
         isStarted = false
         sessionTimer.cancel()
-        onStopSessionListener?.invoke()
+        onStopSessionListener.invoke()
         BackgroundLocationTrackingService.getInstance(context).stopLocationService()
     }
 
-    fun pauseSession() {
+    fun pauseSession(onPauseSessionListener: (() -> Unit) = {}) {
         isPaused = true
         pauseTimer.start()
-        onPauseSessionListener?.invoke()
+        onPauseSessionListener.invoke()
     }
 
-    fun resumeSession() {
+    fun resumeSession(onResumeSessionListener: (() -> Unit) = {}) {
         isPaused = false
         shouldSkipAfterResume = true
         totalPauseTimePassed += currentPauseTimePassed
         pauseTimer.cancel()
-        onResumeSessionListener?.invoke()
+        onResumeSessionListener.invoke()
     }
 
     private fun resetSession() {
@@ -109,12 +111,13 @@ object SpeedTrackingSession {
             tripDistanceF,
             avgSpeedF,
             timePassed,
-            signalLevel
+            signalLevel,
+            isPaused
         )
     }
 
     private fun initUserLocation(location: Location) {
-        if(oldLat == 0.0 && oldLong == 0.0) {
+        if (oldLat == 0.0 && oldLong == 0.0) {
             oldLat = location.latitude
             oldLong = location.longitude
         }
@@ -140,7 +143,7 @@ object SpeedTrackingSession {
                 speed = location.speed.toDouble()
                 updateMaxSpeed()
             } else {
-                if(!shouldSkipAfterResume) {
+                if (!shouldSkipAfterResume) {
                     val distance: Double =
                         calculateDistance(latitude, longitude, oldLat, oldLong).toDouble()
                     val timeDifferent = newTime - curTime

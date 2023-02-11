@@ -10,11 +10,14 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.lifecycleScope
 import com.khue.speedmodule.databinding.ActivityMainBinding
 import com.khue.speedmodule.speedtracking.user_session.SpeedTrackingSession
 import com.khue.speedmodule.speedtracking.utils.notification.NotificationUtil
 import com.khue.speedmodule.speedtracking.utils.runOnApiAbove
 import com.khue.speedmodule.speedtracking.utils.speed.*
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,7 +42,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeLocation() {
-        SpeedTrackingSession.sessionDataListener = { newSessionData, _ ->
+        SpeedTrackingSession.sessionData.asLiveData().observe(this){ newSessionData ->
             val message = "Speed: ${newSessionData.speed}" +
                     "\nMax speed: ${newSessionData.maxSpeed * 3.6} " +
                     "\nAVG speed: ${newSessionData.avgSpeedF}" +
