@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     private fun observeLocation() {
         SpeedTrackingSession.sessionDataListener = { newSessionData, _ ->
             val message = "Speed: ${newSessionData.speed}" +
-                    "\nMax speed: ${newSessionData.maxSpeed} " +
+                    "\nMax speed: ${newSessionData.maxSpeed * 3.6} " +
                     "\nAVG speed: ${newSessionData.avgSpeedF}" +
                     "\nTime passed: ${newSessionData.timePassed}" +
                     "\nTrip distance: ${newSessionData.tripDistance}" +
@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
                     "\nSignal level: ${newSessionData.signalLevel}"
             NotificationUtil.updateNotification(message, this)
             Log.i("MainActivity", "Location: $newSessionData")
-            binding.textView.text = message
+            if(_binding != null) binding.textView.text = message
         }
     }
 
@@ -158,6 +158,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
     }
 }
 
